@@ -2,9 +2,9 @@ package dev.slne.hys.command.server.command.manager
 
 import dev.slne.hys.command.server.command.HysCommand
 import dev.slne.hys.command.server.plugin
-import dev.slne.surf.surfapi.core.api.util.freeze
-import dev.slne.surf.surfapi.core.api.util.mutableObjectSetOf
+import it.unimi.dsi.fastutil.objects.ObjectArraySet
 import it.unimi.dsi.fastutil.objects.ObjectSet
+import it.unimi.dsi.fastutil.objects.ObjectSets
 import kotlinx.coroutines.CoroutineExceptionHandler
 import kotlinx.coroutines.CoroutineName
 import kotlinx.coroutines.CoroutineScope
@@ -17,8 +17,8 @@ object HysCommandManager {
 
         })
 
-    private val _commands = mutableObjectSetOf<HysCommand>()
-    val commands: @Unmodifiable ObjectSet<HysCommand> get() = _commands.freeze()
+    private val _commands = ObjectArraySet<HysCommand>()
+    val commands: @Unmodifiable ObjectSet<HysCommand> get() = ObjectSets.unmodifiable(_commands)
 
     fun registerCommand(command: HysCommand) {
         _commands.add(command)

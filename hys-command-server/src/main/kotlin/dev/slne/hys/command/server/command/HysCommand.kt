@@ -7,7 +7,7 @@ import com.hypixel.hytale.server.core.command.system.CommandSender
 import com.hypixel.hytale.server.core.console.ConsoleSender
 import com.hypixel.hytale.server.core.entity.entities.Player
 import dev.slne.hys.command.server.command.manager.HysCommandManager
-import dev.slne.surf.surfapi.core.api.util.mutableObjectSetOf
+import it.unimi.dsi.fastutil.objects.ObjectArraySet
 import kotlinx.coroutines.launch
 import java.util.concurrent.CompletableFuture
 
@@ -39,8 +39,8 @@ abstract class HysCommand(
     val requiresConfirmation: Boolean = false
 ) {
     private val allowsExtraArguments = false
-    private val aliases = mutableObjectSetOf<String>()
-    private val subCommands = mutableObjectSetOf<HysCommand>()
+    private val aliases = ObjectArraySet<String>()
+    private val subCommands = ObjectArraySet<HysCommand>()
 
     private var anyExecutor: (suspend (sender: CommandSender, context: CommandContext) -> Unit)? =
         null

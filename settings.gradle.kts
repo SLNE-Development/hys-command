@@ -4,5 +4,5 @@ plugins {
 
 rootProject.name = "hys-command"
 
-include("hys-command-api")
+//include("hys-command-api")
 include("hys-command-server")
