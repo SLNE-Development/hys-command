@@ -5,10 +5,6 @@ import com.hypixel.hytale.server.core.Message
 fun testCommand() = hysCommand("test", "A test command") {
     withSubCommand(testSubCommand())
 
-    withUnregisterHook {
-        println("Test command unregistered!")
-    }
-
     anyExecutor { sender, context ->
         sender.sendMessage(Message.raw("You executed the test command!"))
     }

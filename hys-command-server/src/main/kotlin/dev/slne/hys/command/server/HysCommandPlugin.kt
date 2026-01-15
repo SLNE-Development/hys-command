@@ -22,8 +22,7 @@ class HysCommandPlugin(init: JavaPluginInit) : JavaPlugin(init) {
     }
 
     override fun start() {
-
-        command
+        
     }
 
     override fun shutdown() {
