@@ -2,7 +2,7 @@ plugins {
     id("org.gradle.toolchains.foojay-resolver-convention") version "0.8.0"
 }
 
-rootProject.name = "hys-command"
+rootProject.name = "shy-command"
 
-//include("hys-command-api")
-include("hys-command-server")
+//include("shy-command-api")
+include("shy-command-server")

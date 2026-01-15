@@ -3,5 +3,5 @@ plugins {
 }
 
 hytalePluginFile {
-    main = "dev.slne.hys.command.server.HysCommandPlugin"
+    main = "dev.slne.shy.command.server.ShyCommandPlugin"
 }

@@ -1,4 +1,4 @@
-package dev.slne.hys.command.server.command
+package dev.slne.shy.command.server.command
 
 import com.hypixel.hytale.server.core.command.system.CommandSender
 import com.hypixel.hytale.server.core.console.ConsoleSender

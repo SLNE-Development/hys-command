@@ -1,4 +1,4 @@
-package dev.slne.hys.command.server.command
+package dev.slne.shy.command.server.command
 
 import com.hypixel.hytale.server.core.command.system.CommandContext
 import com.hypixel.hytale.server.core.command.system.CommandRegistration
@@ -7,43 +7,70 @@ import com.hypixel.hytale.server.core.command.system.basecommands.AbstractAsyncC
 import com.hypixel.hytale.server.core.command.system.basecommands.AbstractCommandCollection
 import com.hypixel.hytale.server.core.console.ConsoleSender
 import com.hypixel.hytale.server.core.entity.entities.Player
-import dev.slne.hys.command.server.command.manager.HysCommandManager
+import com.hypixel.hytale.server.core.plugin.JavaPlugin
+import com.hypixel.hytale.server.core.plugin.PluginClassLoader
+import dev.slne.shy.command.server.command.manager.ShyCommandManager
+import dev.slne.shy.command.server.command.reflection.Reflection
+import dev.slne.surf.surfapi.core.api.util.getCallerClass
+import dev.slne.surf.surfapi.hytale.api.coroutines.scope
 import it.unimi.dsi.fastutil.objects.ObjectArraySet
+import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.future.future
 import java.util.concurrent.CompletableFuture
 
-fun hysCommand(
+fun shyCommand(
     name: String,
     description: String,
     requiresConfirmation: Boolean = false,
-    init: HysCommand.() -> Unit
-): HysCommand {
-    val command = object : HysCommand(name, description, requiresConfirmation) {}
+    owner: JavaPlugin? = null,
+    init: ShyCommand.() -> Unit
+): ShyCommand {
+    val ownerPlugin = determinePlugin(owner)
+    val command = object : ShyCommand(ownerPlugin, name, description, requiresConfirmation) {}
+
     command.init()
+
     return command.register()
 }
 
-fun hysSubCommand(
+fun shySubCommand(
     name: String,
     description: String,
     requiresConfirmation: Boolean = false,
-    init: HysCommand.() -> Unit
-): HysCommand {
-    val command = object : HysCommand(name, description, requiresConfirmation) {}
+    owner: JavaPlugin? = null,
+    init: ShyCommand.() -> Unit
+): ShyCommand {
+    val ownerPlugin = determinePlugin(owner)
+    val command = object : ShyCommand(ownerPlugin, name, description, requiresConfirmation) {}
+
     command.init()
+
     return command
 }
 
-abstract class HysCommand(
+private fun determinePlugin(plugin: JavaPlugin?): JavaPlugin {
+    return if (plugin != null) {
+        plugin
+    } else {
+        val classLoader = getCallerClass(1)?.classLoader as? PluginClassLoader
+            ?: error("Could not determine calling plugin classloader")
+
+        Reflection.PLUGIN_CLASSLOADER_PROXY.getPlugin(classLoader)
+            ?: error("$classLoader plugin not found")
+    }
+}
+
+abstract class ShyCommand(
+    val owner: JavaPlugin,
     val name: String,
     val description: String,
     val requiresConfirmation: Boolean = false
 ) {
     private val allowsExtraArguments = false
     private val aliases = ObjectArraySet<String>()
-    private val subCommands = ObjectArraySet<HysCommand>()
+    private val subCommands = ObjectArraySet<ShyCommand>()
 
-    private var executor: Pair<ExecutorType, (suspend (sender: CommandSender, context: CommandContext) -> Unit)>? =
+    private var executor: Pair<ExecutorType, (suspend CoroutineScope.(sender: CommandSender, context: CommandContext) -> Unit)>? =
         null
 
     var unregisterHook: (() -> Unit)? = null
@@ -52,31 +79,31 @@ abstract class HysCommand(
     var enabled: Boolean = true
         private set
 
-    fun register(): HysCommand {
-        HysCommandManager.registerCommand(this)
+    fun register(): ShyCommand {
+        ShyCommandManager.registerCommand(this)
 
         return this
     }
 
-    fun isEnabled(enabled: Boolean): HysCommand {
+    fun isEnabled(enabled: Boolean): ShyCommand {
         this.enabled = enabled
 
         return this
     }
 
-    fun setEnabled(enabled: Boolean): HysCommand {
+    fun setEnabled(enabled: Boolean): ShyCommand {
         this.enabled = enabled
 
         return this
     }
 
-    fun setDisabled(disabled: Boolean): HysCommand {
+    fun setDisabled(disabled: Boolean): ShyCommand {
         this.enabled = !disabled
 
         return this
     }
 
-    fun withUnregisterHook(hook: () -> Unit): HysCommand {
+    fun withUnregisterHook(hook: () -> Unit): ShyCommand {
         this.unregisterHook = hook
 
         return this
@@ -89,8 +116,8 @@ abstract class HysCommand(
     }
 
     fun anyExecutor(
-        function: suspend (sender: CommandSender, context: CommandContext) -> Unit
-    ): HysCommand {
+        function: suspend CoroutineScope.(sender: CommandSender, context: CommandContext) -> Unit
+    ): ShyCommand {
         requireNoOtherExecutorsSet()
 
         this.executor = Pair(ExecutorType.ANY, function)
@@ -99,8 +126,8 @@ abstract class HysCommand(
     }
 
     fun consoleExecutor(
-        function: suspend (sender: ConsoleSender, context: CommandContext) -> Unit
-    ): HysCommand {
+        function: suspend CoroutineScope.(sender: ConsoleSender, context: CommandContext) -> Unit
+    ): ShyCommand {
         requireNoOtherExecutorsSet()
 
         this.executor = Pair(ExecutorType.CONSOLE) { sender, context ->
@@ -111,8 +138,8 @@ abstract class HysCommand(
     }
 
     fun playerExecutor(
-        function: suspend (sender: Player, context: CommandContext) -> Unit
-    ): HysCommand {
+        function: suspend CoroutineScope.(sender: Player, context: CommandContext) -> Unit
+    ): ShyCommand {
         requireNoOtherExecutorsSet()
 
         this.executor = Pair(ExecutorType.PLAYER) { sender, context ->
@@ -122,7 +149,7 @@ abstract class HysCommand(
         return this
     }
 
-    fun withSubCommand(subCommand: HysCommand): HysCommand {
+    fun withSubCommand(subCommand: ShyCommand): ShyCommand {
         this.subCommands.add(subCommand)
 
         return this
@@ -143,10 +170,11 @@ abstract class HysCommand(
     private fun toAbstractCommandCollection(): AbstractCommandCollection {
         return object : AbstractCommandCollection(name, description) {
             init {
-                addAliases(*this@HysCommand.aliases.toTypedArray())
-                setAllowsExtraArguments(this@HysCommand.allowsExtraArguments)
+                addAliases(*this@ShyCommand.aliases.toTypedArray())
+                setAllowsExtraArguments(this@ShyCommand.allowsExtraArguments)
+                setOwner(this@ShyCommand.owner)
 
-                this@HysCommand.subCommands.forEach { subCommand ->
+                this@ShyCommand.subCommands.forEach { subCommand ->
                     addSubCommand(subCommand.toCommand())
                 }
             }
@@ -156,12 +184,13 @@ abstract class HysCommand(
     private fun toAbstractCommand(): AbstractAsyncCommand {
         return object : AbstractAsyncCommand(name, description, requiresConfirmation) {
             init {
-                addAliases(*this@HysCommand.aliases.toTypedArray())
-                setAllowsExtraArguments(this@HysCommand.allowsExtraArguments)
+                addAliases(*this@ShyCommand.aliases.toTypedArray())
+                setAllowsExtraArguments(this@ShyCommand.allowsExtraArguments)
+                setOwner(this@ShyCommand.owner)
             }
 
-            override fun executeAsync(context: CommandContext): CompletableFuture<Void?> =
-                HysCommandManager.scope.future {
+            override fun executeAsync(context: CommandContext): CompletableFuture<Void?> {
+                return this@ShyCommand.owner.scope.future {
                     val executor = executor
                         ?: throw IllegalStateException("No executor defined for command '${name}'")
 
@@ -172,6 +201,7 @@ abstract class HysCommand(
 
                     null
                 }
+            }
         }
     }
 }
